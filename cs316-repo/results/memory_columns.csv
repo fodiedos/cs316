@@ -1,0 +1,9 @@
+,default_dtype,default_bytes,optimised_dtype,optimised_bytes
+N,int64,17600,int16,4400
+P,int64,17600,int16,4400
+K,int64,17600,int16,4400
+temperature,float64,17600,float32,8800
+humidity,float64,17600,float32,8800
+ph,float64,17600,float32,8800
+rainfall,float64,17600,float32,8800
+label,str,123500,category,3991

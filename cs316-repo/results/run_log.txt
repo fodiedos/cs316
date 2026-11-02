@@ -1,0 +1,91 @@
+
+======================================================================
+1. Loading data with memory optimisation
+======================================================================
+DataFrame memory : 246,832 B -> 52,523 B  (-78.7 %)
+tracemalloc peak : 453,306 B -> 433,211 B  (-4.4 %)
+max value change from float32: 1.45e-05
+chunked (500 rows) per-crop means equal full-file means: True
+
+======================================================================
+2. Exploratory data analysis
+======================================================================
+              count    mean    std    min    25%    50%     75%     max
+N            2200.0   50.55  36.92   0.00  21.00  37.00   84.25  140.00
+P            2200.0   53.36  32.99   5.00  28.00  51.00   68.00  145.00
+K            2200.0   48.15  50.65   5.00  20.00  32.00   49.00  205.00
+temperature  2200.0   25.62   5.06   8.83  22.77  25.60   28.56   43.68
+humidity     2200.0   71.48  22.26  14.26  60.26  80.47   89.95   99.98
+ph           2200.0    6.47   0.77   3.50   5.97   6.43    6.92    9.94
+rainfall     2200.0  103.46  54.96  20.21  64.55  94.87  124.27  298.56
+strongest correlation: {'pair': ('P', 'K'), 'r': 0.74}
+crops from lowest to highest input needs: ['orange', 'mungbean', 'mothbeans', 'mango', 'lentil', 'pomegranate', 'coconut', 'blackgram', 'kidneybeans', 'muskmelon', 'pigeonpeas', 'watermelon', 'maize', 'chickpea', 'papaya', 'cotton', 'coffee', 'jute', 'banana', 'rice', 'grapes', 'apple']
+
+======================================================================
+3. Train / test split
+======================================================================
+train (1760, 7), test (440, 7)
+
+======================================================================
+4. Model selection (grid search, 5-fold stratified CV)
+======================================================================
+                    model  cv_accuracy_mean  cv_accuracy_std  test_accuracy  test_macro_f1  test_log_loss  search_seconds
+0           Random Forest            0.9955           0.0056         0.9955         0.9955         0.0562         15.5261
+1             Gaussian NB            0.9949           0.0042         0.9955         0.9954         0.0156          0.0985
+2             Extra Trees            0.9938           0.0033         0.9955         0.9955         0.0990          5.6017
+3  Hist Gradient Boosting            0.9915           0.0051         0.9886         0.9886         0.0400         37.0391
+4           Decision Tree            0.9852           0.0068         0.9795         0.9794         0.7373          0.2558
+5               SVM (RBF)            0.9830           0.0018         0.9886         0.9886         0.1670          4.6579
+6     Logistic Regression            0.9778           0.0066         0.9864         0.9863         0.0377          2.2635
+7                    k-NN            0.9682           0.0117         0.9818         0.9816         0.1336          0.2910
+selected model: Random Forest
+
+======================================================================
+5. Detailed evaluation of the selected model
+======================================================================
+test accuracy 0.9955, top-3 accuracy 1.0000
+misclassified (true -> predicted): [('blackgram', 'maize'), ('rice', 'jute')]
+    feature   mean    std
+   humidity 0.3245 0.0186
+          N 0.2395 0.0155
+   rainfall 0.2257 0.0112
+          P 0.1380 0.0189
+          K 0.1181 0.0110
+         ph 0.0099 0.0045
+temperature 0.0086 0.0033
+model      Extra Trees  Gaussian NB  Random Forest
+noise_pct                                         
+0               0.9955       0.9955         0.9955
+5               0.9955       0.9955         0.9841
+10              0.9795       0.9773         0.9636
+20              0.9273       0.8886         0.8682
+30              0.8295       0.7455         0.7636
+ablation - All 7 features: 0.9955 ± 0.0056
+ablation - Climate only (T, RH, pH, rain): 0.9636 ± 0.0049
+ablation - Soil N-P-K only: 0.6653 ± 0.0186
+
+======================================================================
+6. Resource-aware re-ranking (sustainability layer)
+======================================================================
+clean test {'base_cost': 0.045, 'new_cost': 0.045, 'changed_pct': 0.0, 'base_fert_gap': 9.799, 'new_fert_gap': 9.799, 'base_water_gap': 6.295, 'new_water_gap': 6.295, 'base_matches_label_pct': 99.545, 'new_matches_label_pct': 99.545, 'base_mean_probability': 0.952, 'new_mean_probability': 0.952}
+noisy test (20 %) {'base_cost': 0.065, 'new_cost': 0.056, 'changed_pct': 6.364, 'base_fert_gap': 15.533, 'new_fert_gap': 14.594, 'base_water_gap': 8.661, 'new_water_gap': 6.838, 'base_matches_label_pct': 87.955, 'new_matches_label_pct': 87.045, 'base_mean_probability': 0.703, 'new_mean_probability': 0.699}
+arid (rain x0.5) {'base_cost': 0.2, 'new_cost': 0.153, 'changed_pct': 21.591, 'base_fert_gap': 9.738, 'new_fert_gap': 11.99, 'base_water_gap': 44.663, 'new_water_gap': 31.833, 'base_matches_label_pct': 85.909, 'new_matches_label_pct': 64.545, 'base_mean_probability': 0.611, 'new_mean_probability': 0.587, 'base_top_crops': {'lentil': 37, 'mothbeans': 34, 'pomegranate': 30, 'grapes': 26, 'jute': 25}, 'new_top_crops': {'mothbeans': 53, 'muskmelon': 42, 'grapes': 40, 'lentil': 38, 'pomegranate': 38}, 'rain_factor': 0.5}
+re-ranker activity by model: {'Random Forest': {'arid_changed_pct': 21.59, 'arid_water_gap_change_pct': -28.7, 'test_mean_top1_prob': 0.952}, 'Gaussian NB': {'arid_changed_pct': 0.45, 'arid_water_gap_change_pct': -0.3, 'test_mean_top1_prob': 0.992}, 'Extra Trees': {'arid_changed_pct': 18.41, 'arid_water_gap_change_pct': -28.2, 'test_mean_top1_prob': 0.916}}
+example field: {'N': 40, 'P': 35, 'K': 30, 'temperature': 30.0, 'humidity': 35.0, 'ph': 7.6, 'rainfall': 40.0}
+     crop  probability  fertiliser_gap  water_gap_mm  resource_cost  score
+mothbeans        0.579            12.0      9.400000          0.062  0.259
+    mango        0.360             1.0     54.599998          0.224  0.068
+   lentil        0.034            33.0      6.100000          0.089 -0.027
+plain model -> mothbeans | resource-aware -> mothbeans
+arid field where the decision changes: {'N': 98.0, 'P': 79.0, 'K': 50.0, 'temperature': 25.3, 'humidity': 84.5, 'ph': 6.4, 'rainfall': 45.5}
+      crop  probability  fertiliser_gap  water_gap_mm  resource_cost  score
+    banana        0.514             5.5     59.667999          0.254  0.130
+watermelon        0.346             0.5      4.468000          0.019  0.163
+    papaya        0.100             0.0     88.767998          0.362 -0.131
+
+======================================================================
+7. Saving the final model (compressed)
+======================================================================
+model file: 3,227,305 B -> 428,965 B compressed
+
+All results written to /mnt/attach/outputs/cs316/cs316-repo/results

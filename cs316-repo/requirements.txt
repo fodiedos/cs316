@@ -1,0 +1,7 @@
+# Tested with Python 3.13. Older versions within these ranges should also work.
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+matplotlib>=3.8
+seaborn>=0.13
+joblib>=1.3
